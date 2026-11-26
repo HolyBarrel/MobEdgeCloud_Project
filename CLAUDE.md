@@ -265,3 +265,6 @@ These come from the design conversation. Don't re-propose a rejected option with
 4. Report what changed, what was actually verified (build, tests, device) and the smallest next step. Never claim a device test, deployment or measurement that wasn't performed.
 5. The repo is **public**. Keep secrets, credentials and private sensor captures out of git. Camera calibration is transient, and raw recording or export only happens when a developer explicitly triggers it.
 6. Get approval before provisioning billable cloud infrastructure.
+7. Mark versions with git tags once an iteration delivers useful, working functionality, such as a finished stage or a completion level. Stage 0 is deliberately untagged.
+   - The naming scheme isn't agreed yet. Before the first tag, propose one (for example an annotated `v0.1.0`) and agree on it with the user, including whether `versionName`/`versionCode` in `app/build.gradle.kts` follow the tags.
+   - Confirm the tag name and target commit before pushing a tag.

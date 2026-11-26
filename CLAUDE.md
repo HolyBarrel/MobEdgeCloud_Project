@@ -27,7 +27,7 @@ An edge PC or a cloud backend analyzes the recorded motion, simulates the flight
   - **Not yet launched on a physical phone.**
 - Tests: `MainViewModelTest` (JVM) and `MainActivityTest` (instrumented, launches the Activity and taps the button), plus the template examples.
 - There is no backend code in the repo yet. When it's added, record its location and commands here.
-- **Next task: plan Stage 1 (Capture) with the user and create its GitHub issues.** Write no Stage 1 code until those issues exist and the user asks for implementation. Don't start later stages unless asked.
+- **Next task: Stage 1 (Capture)**, planned as GitHub issues #2–#7 in the "Stage 1: Capture" milestone. The user reviews them first; then implement one issue at a time, and only when asked. Don't start later stages unless asked.
 
 ## Sources of truth
 

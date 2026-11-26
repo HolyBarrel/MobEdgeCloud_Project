@@ -22,9 +22,12 @@ An edge PC or a cloud backend analyzes the recorded motion, simulates the flight
 
 ## Status
 
-- Development has **not started**. The app is the unmodified Android Studio Compose template: `MainActivity` shows a `Greeting`, and the only tests are the template examples.
+- **Stage 0 is done** (26 Nov 2026). `MainActivity` hosts `MainScreen` (stateless composable), which renders `MainUiState` from `MainViewModel` (a `StateFlow`, collected with `collectAsStateWithLifecycle`). The tap counter is a skeleton placeholder; Stage 1 replaces it.
+  - Verified on the `Medium_Phone_API_37.0` emulator (API 37): build, unit tests, instrumented tests, cold launch, and state surviving rotation.
+  - **Not yet launched on a physical phone.**
+- Tests: `MainViewModelTest` (JVM) and `MainActivityTest` (instrumented, launches the Activity and taps the button), plus the template examples.
 - There is no backend code in the repo yet. When it's added, record its location and commands here.
-- **Next task: Stage 0 only** (see "Delivery stages" below). Don't start later stages unless asked.
+- **Next task: plan Stage 1 (Capture) with the user and create its GitHub issues.** Write no Stage 1 code until those issues exist and the user asks for implementation. Don't start later stages unless asked.
 
 ## Sources of truth
 
@@ -43,12 +46,17 @@ The host is Windows. Use `gradlew.bat` in PowerShell or cmd, and `./gradlew` in 
 | Task | Command |
 |---|---|
 | Debug APK | `./gradlew assembleDebug` |
-| JVM unit tests | `./gradlew test`. One class: `./gradlew :app:testDebugUnitTest --tests "sapienz.allison.disclab.ExampleUnitTest"` |
+| JVM unit tests | `./gradlew test`. One class: `./gradlew :app:testDebugUnitTest --tests "sapienz.allison.disclab.MainViewModelTest"` |
 | Instrumented tests (device or emulator) | `./gradlew connectedAndroidTest` |
 | Install on device | `./gradlew installDebug` |
-| Lint | `./gradlew lint` |
+| Launch | `adb shell am start -W -n sapienz.allison.disclab/.MainActivity` |
+| Lint | `./gradlew lint` (report: `app/build/reports/lint-results-debug.html`) |
+| Emulator | `emulator -avd Medium_Phone_API_37.0` (add `-no-window` for headless) |
 
-- These are the standard wrapper tasks and **haven't been run in this repo yet**. Stage 0 must confirm them and fix this table.
+- All of these were run successfully on 26 Nov 2026. A cold build takes about a minute.
+- `connectedAndroidTest` **uninstalls the app** when it finishes, so run `installDebug` again before launching by hand.
+- Lint: 0 errors. Its 13 warnings all come from the template (unused template colors, a redundant activity label, newer versions available), so they're left alone under the no-migration rule below.
+- `emulator` lives in the SDK's `emulator` folder; the SDK is at `%LOCALAPPDATA%\Android\Sdk`.
 - `JAVA_HOME` points at Android Studio's bundled JBR (JDK 25). That matches the daemon toolchain in `gradle/gradle-daemon-jvm.properties`.
 - `adb` isn't on `PATH`; it's in the Android SDK's `platform-tools`.
 
@@ -57,6 +65,7 @@ The host is Windows. Use `gradlew.bat` in PowerShell or cmd, and `./gradlew` in 
 - Single module `:app`. The namespace and applicationId are both `sapienz.allison.disclab`.
 - Versions: AGP 9.5.3, Gradle 9.6.0, Kotlin 2.2.10, Compose BOM 2026.02.01. compileSdk and targetSdk are 37, minSdk is 26, and bytecode targets Java 11.
 - Add dependencies through the version catalog, `gradle/libs.versions.toml`.
+  - `lifecycle-runtime-compose` and `lifecycle-viewmodel-compose` (added in Stage 0) share the template's `lifecycleRuntimeKtx` version ref, because AndroidX Lifecycle releases them together. Bump all three at once.
 - Kotlin uses AGP 9's built-in support. Only `com.android.application` and `org.jetbrains.kotlin.plugin.compose` are applied; don't add `org.jetbrains.kotlin.android`.
 - R8 keep rules go in `app/src/main/keepRules/`; there is no `proguard-rules.pro`. Optimization is enabled for release builds, and the Gradle configuration cache is on.
 - Don't migrate or upgrade the generated setup unless a feature needs it. When a stage needs a library, pick a compatible version from the official docs. Don't add dependencies for deferred features.
@@ -171,8 +180,8 @@ Work one stage at a time, or a smaller slice of one. Keep the app buildable and 
 
 | Stage | Deliverable | Acceptance |
 |---|---|---|
-| **0 — Skeleton** (next) | One screen, a ViewModel and observable state on the existing project; documented build and run commands | Build succeeds and the screen launches. Report separately if the launch couldn't be tested on a device |
-| 1 — Capture | Lifecycle-aware sensor recording, volume-key release and cancel, diagnostics, local export | A real gesture is exported and inspected; repeated keys, interruptions and release timing are checked on the phone |
+| **0 — Skeleton** (done; emulator only) | One screen, a ViewModel and observable state on the existing project; documented build and run commands | Build succeeds and the screen launches. Report separately if the launch couldn't be tested on a device |
+| **1 — Capture** (next) | Lifecycle-aware sensor recording, volume-key release and cancel, diagnostics, local export | A real gesture is exported and inspected; repeated keys, interruptions and release timing are checked on the phone |
 | 2 — Controller feasibility | Aim reference, then grip offset, then recordings analyzed by pure backend functions | Passes the feasibility gate above |
 | 3 — Simulation integration | PC API, ballistic engine, synthetic and recorded inputs, timed top-down playback, IDs, timing logs, replay script | Known inputs match the expected physics, and the phone shows the returned trajectory |
 | 4 — First playable | Real gestures sent to the PC; one course, target/ground/OB rules, score, next lie, manual playback | A hole is finished on the device, and cancel, error or retry can't corrupt the active throw |

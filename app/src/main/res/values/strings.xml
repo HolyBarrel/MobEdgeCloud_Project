@@ -1,3 +1,6 @@
 <resources>
     <string name="app_name">DiscLab</string>
+    <string name="tagline">A Motion-Based Disc Golf Training Simulator</string>
+    <string name="tap_count">State updates: %1$d</string>
+    <string name="tap_button">Update state</string>
 </resources>

@@ -290,3 +290,5 @@ These come from the design conversation. Don't re-propose a rejected option with
    - The naming scheme isn't agreed yet. Before the first tag, propose one (for example an annotated `v0.1.0`) and agree on it with the user, including whether `versionName`/`versionCode` in `app/build.gradle.kts` follow the tags.
    - Confirm the tag name and target commit before pushing a tag.
 8. Work on one branch per stage, created from `main` and named `feature/stage<N>-<milestone>`: Stage 1 is `feature/stage1-capture`, and Stage 0 used `setup/stage0-wiring`. Implement the stage's issues on that branch one at a time.
+   - Always work towards the remote repo. After each commit, push the stage branch to `origin` and check that it arrived.
+   - Then update the issue. Tick only the "Done when" items that were actually verified, and comment with the commit, the changes, any deviations from the plan, what was verified (and where), and what's still open.

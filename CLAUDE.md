@@ -22,12 +22,16 @@ An edge PC or a cloud backend analyzes the recorded motion, simulates the flight
 
 ## Status
 
-- **Stage 0 is done** (26 Nov 2026). `MainActivity` hosts `MainScreen` (stateless composable), which renders `MainUiState` from `MainViewModel` (a `StateFlow`, collected with `collectAsStateWithLifecycle`). The tap counter is a skeleton placeholder; Stage 1 replaces it.
+- **Stage 0 is done** (26 Nov 2026). `MainActivity` hosts `MainScreen` (stateless composable), which renders `MainUiState` from `MainViewModel` (a `StateFlow`, collected with `collectAsStateWithLifecycle`).
   - Verified on the `Medium_Phone_API_37.0` emulator (API 37): build, unit tests, instrumented tests, cold launch, and state surviving rotation.
-  - **Not yet launched on a physical phone.**
-- Tests: `MainViewModelTest` (JVM) and `MainActivityTest` (instrumented, launches the Activity and taps the button), plus the template examples.
+  - Stage 0 itself never ran on a phone. The app's first phone run came with #2 (below).
+- **Stage 1 (Capture) is in progress** on branch `feature/stage1-capture`, as GitHub issues #2–#7 in the "Stage 1: Capture" milestone. Implement one issue at a time, and only when asked. Don't start later stages unless asked.
+  - **#2, the volume-down throw button, is implemented** (27 Nov 2026) and replaced the Stage 0 tap counter. Its rules are under "Controller and calibration" below.
+    - Verified on the emulator: build, unit tests, instrumented tests, lint, and scripted `adb` key injection (hold and release, repeats, the 5 s timeout, the notification shade, Home, screen off, rotation while armed, volume pass-through in Idle).
+    - **On the user's physical phone** (27 Nov 2026, debug APK sideloaded), the user reported that it works: the button works, the app responds quickly, and the shortest press-to-release seen was about 50 ms. The interruption cancels and the comfort of a full throwing motion weren't reported separately.
+  - Next: #3, sensor recording.
+- Tests: `CaptureMachineTest` (JVM, the throw button's rules), `MainViewModelTest` (JVM, key consumption and the hold timer, using `MainDispatcherRule`) and `MainActivityTest` (instrumented: arms capture and injects a volume-down press through the system's input pipeline), plus the template examples.
 - There is no backend code in the repo yet. When it's added, record its location and commands here.
-- **Next task: Stage 1 (Capture)**, planned as GitHub issues #2–#7 in the "Stage 1: Capture" milestone. The user reviews them first; then implement one issue at a time, and only when asked. Don't start later stages unless asked.
 
 ## Sources of truth
 
@@ -49,13 +53,19 @@ The host is Windows. Use `gradlew.bat` in PowerShell or cmd, and `./gradlew` in 
 | JVM unit tests | `./gradlew test`. One class: `./gradlew :app:testDebugUnitTest --tests "sapienz.allison.disclab.MainViewModelTest"` |
 | Instrumented tests (device or emulator) | `./gradlew connectedAndroidTest` |
 | Install on device | `./gradlew installDebug` |
+| Install without USB (current way) | `./gradlew assembleDebug`, then send `app/build/outputs/apk/debug/app-debug.apk` to the phone and open it. Wireless debugging (Android 11+) is the upgrade path |
 | Launch | `adb shell am start -W -n sapienz.allison.disclab/.MainActivity` |
 | Lint | `./gradlew lint` (report: `app/build/reports/lint-results-debug.html`) |
 | Emulator | `emulator -avd Medium_Phone_API_37.0` (add `-no-window` for headless) |
+| Simulate a throw (emulator) | `adb shell input keyevent --duration 800 KEYCODE_VOLUME_DOWN` holds volume-down for 0.8 s; `--longpress` instead sends one auto-repeat |
 
-- All of these were run successfully on 26 Nov 2026. A cold build takes about a minute.
+- All of these were run successfully on 26 Nov 2026, and again on 27 Nov 2026 for #2. A cold build takes about a minute.
 - `connectedAndroidTest` **uninstalls the app** when it finishes, so run `installDebug` again before launching by hand.
-- Lint: 0 errors. Its 13 warnings all come from the template (unused template colors, a redundant activity label, newer versions available), so they're left alone under the no-migration rule below.
+- Emulator key injection:
+  - Wait for the app's first frame (`am start -W`) before injecting keys. The first cold start after an install once took 14 s, and a key sent before the window has focus ends in an ANR.
+  - Injected holds come out 0.2–0.7 s longer than `--duration`, because the shell injects them synchronously. The app shows the event times exactly as stamped.
+  - On the API 37 emulator, the first volume press outside an armed capture only opens the volume panel, and the second changes the volume.
+- Lint: 0 errors and 13 warnings: unused template colors, a redundant activity label, and newer versions available (including `kotlinx-coroutines-test`, which is pinned on purpose; see below). They're left alone under the no-migration rule below.
 - `emulator` lives in the SDK's `emulator` folder; the SDK is at `%LOCALAPPDATA%\Android\Sdk`.
 - `JAVA_HOME` points at Android Studio's bundled JBR (JDK 25). That matches the daemon toolchain in `gradle/gradle-daemon-jvm.properties`.
 - `adb` isn't on `PATH`; it's in the Android SDK's `platform-tools`.
@@ -65,7 +75,9 @@ The host is Windows. Use `gradlew.bat` in PowerShell or cmd, and `./gradlew` in 
 - Single module `:app`. The namespace and applicationId are both `sapienz.allison.disclab`.
 - Versions: AGP 9.5.3, Gradle 9.6.0, Kotlin 2.2.10, Compose BOM 2026.02.01. compileSdk and targetSdk are 37, minSdk is 26, and bytecode targets Java 11.
 - Add dependencies through the version catalog, `gradle/libs.versions.toml`.
-  - `lifecycle-runtime-compose` and `lifecycle-viewmodel-compose` (added in Stage 0) share the template's `lifecycleRuntimeKtx` version ref, because AndroidX Lifecycle releases them together. Bump all three at once.
+  - `lifecycle-runtime-compose` (added in Stage 0) shares the template's `lifecycleRuntimeKtx` version ref, because AndroidX Lifecycle releases them together. Bump both at once.
+  - `kotlinx-coroutines-test` (tests only, added for #2) is pinned to the kotlinx-coroutines version that AndroidX resolves, which is 1.9.0 with Lifecycle 2.11.0. When bumping Lifecycle, check that version with `./gradlew :app:dependencies --configuration debugUnitTestRuntimeClasspath`, and ignore lint's newer-version warning for it.
+  - Stage 0's `lifecycle-viewmodel-compose` was removed in #2. `MainActivity` now gets its ViewModel with `by viewModels()`, which `androidx.activity` 1.13 already provides.
 - Kotlin uses AGP 9's built-in support. Only `com.android.application` and `org.jetbrains.kotlin.plugin.compose` are applied; don't add `org.jetbrains.kotlin.android`.
 - R8 keep rules go in `app/src/main/keepRules/`; there is no `proguard-rules.pro`. Optimization is enabled for release builds, and the Gradle configuration cache is on.
 - Don't migrate or upgrade the generated setup unless a feature needs it. When a stage needs a library, pick a compatible version from the official docs. Don't add dependencies for deferred features.
@@ -122,6 +134,15 @@ The host is Windows. Use `gradlew.bat` in PowerShell or cmd, and `./gradlew` in 
   - Ignore repeat key events (`repeatCount > 0`) and cancel interrupted gestures.
   - Consume the key only during the throw; elsewhere volume works normally.
   - Test ergonomics on the real phone, and add an alternative button only if needed.
+- **The throw button as implemented (#2)** lives in `capture/CaptureMachine.kt`: one pure transition function over sealed, immutable states, with no class per state.
+  - Phases: **Idle** (capture off) ↔ **Ready** (armed by the on-screen control) → **Recording** (volume-down held). A throw ends as **Captured**(press, release) or **Cancelled**(reason). The phase then returns to Ready, and the outcome stays visible.
+  - In Ready, the first `ACTION_DOWN` (`repeatCount == 0`) starts recording. Repeats and any press while recording are ignored, so only one throw is ever active.
+  - `ACTION_UP` ends recording, and its event time is the release, with two exceptions that cancel instead: `FLAG_CANCELED`, or a key-up more than 5 s after the press ("held too long"). A ViewModel timer also cancels at 5 s if no key-up arrives.
+  - Other cancels: the Activity pauses (switching apps, screen off), or the window loses focus (notification shade, system dialogs). The reason shown is whichever signal arrives first. Home and screen-off usually show "key press cancelled by the system", because Android sends a canceled key-up before `onPause`.
+  - Volume-down is consumed only in Ready and Recording, in `MainActivity.onKeyDown`/`onKeyUp`. Don't override `dispatchKeyEvent`: androidx's `ComponentActivity` marks it library-internal, and lint fails with `RestrictedApi`.
+  - Disarming is ignored while recording, so a palm on the screen can't end a throw.
+  - While capture is armed, the screen stays on and the orientation is locked (`SCREEN_ORIENTATION_LOCKED`). A screen timeout or a rotation (which recreates the Activity) would otherwise cancel the throw.
+  - Key times are `KeyEvent.getEventTime()` values: whole milliseconds in the `SystemClock.uptimeMillis()` base, stored as-is until #4 converts them.
 - **Grip:** any comfortable, secure grip. The screen doesn't need to match the disc plane. A captured **neutral grip offset** maps phone orientation to disc orientation.
 - **Aim:** a camera preview with a crosshair maps the direction of a stationary physical landmark, such as a door or tree, onto the chosen virtual aim direction.
   - No AR tracking and no stored image.
@@ -181,7 +202,7 @@ Work one stage at a time, or a smaller slice of one. Keep the app buildable and 
 | Stage | Deliverable | Acceptance |
 |---|---|---|
 | **0 — Skeleton** (done; emulator only) | One screen, a ViewModel and observable state on the existing project; documented build and run commands | Build succeeds and the screen launches. Report separately if the launch couldn't be tested on a device |
-| **1 — Capture** (next) | Lifecycle-aware sensor recording, volume-key release and cancel, diagnostics, local export | A real gesture is exported and inspected; repeated keys, interruptions and release timing are checked on the phone |
+| **1 — Capture** (in progress) | Lifecycle-aware sensor recording, volume-key release and cancel, diagnostics, local export | A real gesture is exported and inspected; repeated keys, interruptions and release timing are checked on the phone |
 | 2 — Controller feasibility | Aim reference, then grip offset, then recordings analyzed by pure backend functions | Passes the feasibility gate above |
 | 3 — Simulation integration | PC API, ballistic engine, synthetic and recorded inputs, timed top-down playback, IDs, timing logs, replay script | Known inputs match the expected physics, and the phone shows the returned trajectory |
 | 4 — First playable | Real gestures sent to the PC; one course, target/ground/OB rules, score, next lie, manual playback | A hole is finished on the device, and cancel, error or retry can't corrupt the active throw |
@@ -268,3 +289,4 @@ These come from the design conversation. Don't re-propose a rejected option with
 7. Mark versions with git tags once an iteration delivers useful, working functionality, such as a finished stage or a completion level. Stage 0 is deliberately untagged.
    - The naming scheme isn't agreed yet. Before the first tag, propose one (for example an annotated `v0.1.0`) and agree on it with the user, including whether `versionName`/`versionCode` in `app/build.gradle.kts` follow the tags.
    - Confirm the tag name and target commit before pushing a tag.
+8. Work on one branch per stage, created from `main` and named `feature/stage<N>-<milestone>`: Stage 1 is `feature/stage1-capture`, and Stage 0 used `setup/stage0-wiring`. Implement the stage's issues on that branch one at a time.

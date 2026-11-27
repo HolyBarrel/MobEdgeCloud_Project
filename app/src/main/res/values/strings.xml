@@ -1,6 +1,26 @@
 <resources>
     <string name="app_name">DiscLab</string>
     <string name="tagline">A Motion-Based Disc Golf Training Simulator</string>
-    <string name="tap_count">State updates: %1$d</string>
-    <string name="tap_button">Update state</string>
+
+    <!-- Capture phases -->
+    <string name="phase_idle">Capture is off. The volume buttons work as usual.</string>
+    <string name="phase_ready">Ready. Hold volume-down through the throw (at most %1$d s) and let go at the moment of release.</string>
+    <string name="phase_recording">Recording. Let go of volume-down to release.</string>
+    <string name="arm_capture">Arm capture</string>
+    <string name="disarm_capture">Disarm</string>
+
+    <!-- Last throw -->
+    <string name="no_throws_yet">No throws yet.</string>
+    <string name="last_throw_captured">Last throw: captured</string>
+    <string name="last_throw_cancelled">Last throw: cancelled (%1$s)</string>
+    <string name="press_and_release">Press %1$d ms, release %2$d ms</string>
+    <string name="held_for">Held for %1$d ms</string>
+    <string name="press_only">Press %1$d ms</string>
+    <string name="time_base">Times are SystemClock.uptimeMillis() values.</string>
+
+    <!-- Cancel reasons, shown inside last_throw_cancelled -->
+    <string name="cancel_key_canceled">key press cancelled by the system</string>
+    <string name="cancel_app_paused">app paused</string>
+    <string name="cancel_focus_lost">app lost focus</string>
+    <string name="cancel_held_too_long">held too long</string>
 </resources>
